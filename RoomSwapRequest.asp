@@ -256,9 +256,7 @@ IF Request.Form("Save") = "1" AND Request.Form("ClearSwapRequest") <> "1" THEN
 		Const ATTRIB_SELECT_SPACE = 3111
 		Dim sSelectSpace, bAttribSuccess, bAssignSuccess, sSwapSelectSpace
 		Dim sAssignEnd, dAssignStart, dAssignEnd
-		'sAssignEnd = CDate(#8/30/2012 9:55 AM#)
-		'dAssignStart = CDate(#8/30/2012 10:05 AM#)
-		'dAssignEnd = CDate(#12/15/2012 2:00 PM#)
+
 		sAssignEnd = oTerm.EndDate
 		dAssignStart = oTerm.StartDate
 		dAssignEnd = oTerm.EndDate
@@ -310,29 +308,8 @@ IF Request.Form("Save") = "1" AND Request.Form("ClearSwapRequest") <> "1" THEN
 		'lElementKey is the assignment (contract item) to change/move for the first patron
 		'lElementSwapKey is the contract item for the second patron to swap with the first
 		If bCanSwap = True Then 'both assignments exist, we can swap
-			'bSuccess3 = oContractWrite.ChangeAssignment3(OdysseyToken(), oTerm.StartDate ,lElementKey, lFacilityToKey, vFailedRows2, , , ,False , , lElementSwapKey) 
-			'After swap, clear both student attributes so one student can't reverse the swap
-'			If sSelectSpace <> "Yes" AND sSwapSelectSpace <> "Yes" Then 'neither patron has done a swap
-			'do the full set of updates and changes
-'				bAssignSuccess = oContractWrite.UpdateOneContractElement2(OdysseyToken(), lElementKey, vpFailedRows, , sAssignEnd)
-'				bAssignSuccess = oContractWrite.UpdateOneContractElement2(OdysseyToken(), lElementSwapKey, vpFailedRows, , sAssignEnd)
-'				bAssignSuccess = oContractWrite.AssignGroup(OdysseyToken(), lFacilityToKey, oStudent.Key, 1, dAssignStart, dAssignEnd, True, bUseRoommateLevel)
-'				bAssignSuccess = oContractWrite.AssignGroup(OdysseyToken(), lFacilityKey, swapKey, 1, dAssignStart, dAssignEnd, True, bUseRoommateLevel)
-'			Elseif sSelectSpace = "Yes" AND sSwapSelectSpace <> "Yes" Then 'current has done a swap
-			'do update and assign for other patron, only assign for current patron
-'				bAssignSuccess = oContractWrite.UpdateOneContractElement2(OdysseyToken(), lElementSwapKey, vpFailedRows, , sAssignEnd)
-'				bAssignSuccess = oContractWrite.AssignGroup(OdysseyToken(), lFacilityKey, swapKey, 1, dAssignStart, dAssignEnd, True, bUseRoommateLevel)
-'				bAssignSuccess = oContractWrite.AssignGroup(OdysseyToken(), lFacilityToKey, oStudent.Key, 1, dAssignStart, dAssignEnd, True, bUseRoommateLevel)
-'			Elseif sSelectSpace <> "Yes" AND sSwapSelectSpace = "Yes" Then 'other has done a swap
-			'do update and assign for current patron, only assign other patron
-'				bAssignSuccess = oContractWrite.UpdateOneContractElement2(OdysseyToken(), lElementKey, vpFailedRows, , sAssignEnd)
-'				bAssignSuccess = oContractWrite.AssignGroup(OdysseyToken(), lFacilityToKey, oStudent.Key, 1, dAssignStart, dAssignEnd, True, bUseRoommateLevel)
-'				bAssignSuccess = oContractWrite.AssignGroup(OdysseyToken(), lFacilityKey, swapKey, 1, dAssignStart, dAssignEnd, True, bUseRoommateLevel)
-'			Elseif sSelectSpace = "Yes" AND sSwapSelectSpace = "Yes" Then 'both have done a swap
-			'do swap only
-				bAssignSuccess = oContractWrite.ChangeAssignment3(OdysseyToken(), dAssignStart ,lElementKey, lFacilityToKey, vFailedRows2, , , ,False , , lElementSwapKey) 
-'			End If
-			
+			bAssignSuccess = oContractWrite.ChangeAssignment3(OdysseyToken(), dAssignStart ,lElementKey, lFacilityToKey, vFailedRows2, , , ,False , , lElementSwapKey) 
+
 			Dim  vAttrFailedRows
 			Set oPatronWrite = GetClass("HMSDBSrv.PatronWrite")
 			'write yes to both select space attributes now, also clear
