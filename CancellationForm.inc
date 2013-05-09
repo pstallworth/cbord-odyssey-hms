@@ -1,5 +1,8 @@
 <script language="VBScript" runat="server">
 
+	Const cancelReason_ID = 4026
+	Const sValidReason = "Not Attending SFA"
+
 Public Function ApplyDecision(ByVal PatronKey, ByVal BCF, ByVal AssignmentDecision, _ 
 				ByVal Decision,	byVal DepositDecision, ByVal startDate, _
 				ByVal endDate, ByVal inventorySheet, ByRef vFailed) ' need to add ByRef vFailed
@@ -10,6 +13,8 @@ Public Function ApplyDecision(ByVal PatronKey, ByVal BCF, ByVal AssignmentDecisi
 	Const Processed_ID = 6936
 	Const NoteType_ID = 11
 	Const NoteType_Key = 31
+
+
 	Dim oHMS, rsPatronAttr, bSuccess, sNote
 
 	Set oHMS = GetClass("HMSDBSrv.PatronWrite")
@@ -48,13 +53,24 @@ End Function
 ' may need to look at adding an isenrolled() test at the bottom
 ' and just like hasApp, if it's true hold the deposit in case of loophole
 ' students
+' 5/7/13: per discussion with D'nese, we need to look at the cancel reason
+' and if the student is 21/60, and not process if not eligible to live off
+' campus and reason is not "not attending"
+' Also need to look at only returning cancellation / renewal cancellations
+
 Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 								ByVal dCancelled, byVal TermIndicator, _
 								ByVal dSubmittedDate, ByVal atDate, _
 								ByRef Decision, ByRef DepositDecision _
 								)
 
-	Dim pDate
+	Const sValidReason = "Not Attending SFA"
+	Const cancelReason_ID = 4026
+	Dim pDate, cType, cReason
+	'moving these two up here to avoid multiple calls'
+	cType = CurrentResidentCancellation(lPatronKey, lTermKey) ' inefficient
+	cReason = GetCancelReason(lPatronKey, lTermKey, atDate)
+
 	If IsSuspended(lPatronKey, atDate) = True Then
 		sDecision = "Academic Suspension. §17C3"
 		sDepositDecision = "Refund." ' Contract Sec. 17C3
@@ -64,6 +80,25 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	Elseif IsRejected(lPatronKey, atDate) = True Then
 		sDecision = "Not eligible for admission. §18"
 		sDepositDecision = "Refund." ' Contract Sec 18
+	ElseIf Not IsNull(cType) AND _
+				StrComp(cReason, "Not Attending SFA", 1) <> 0 Then
+
+		Response.write "Cancellation type matches 6 or 8<br />"
+
+
+		'Need to come full stop if either of these next two occur
+		'as it means paperwork / data entry hasn't been done correctly
+		Response.write "cReason:" & cReason & "<br />"
+		Assert Not IsNull(cReason), "Cancel reason cannot be null or missing"
+		Assert cReason <> "", "Cancel reason cannot be empty"
+
+
+		If StrComp(cReason, sValidReason, 1) = 0 Then
+			Response.write "Cancel reason is not attending"
+		Else
+			Response.write "Cancel reason 60/21 or permit, investigate"
+		End If
+
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
 		If TermIndicator = "Future" Then ' 17A
 			sDecision = "Cancelled on or before deadline. §17A"
@@ -219,6 +254,7 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 
 End Sub
 
+ 
 Public Function getOCPermitStatus(ByVal lPatronKey, ByVal atDate, ByVal endDate, ByRef permitDate)
 
 	Dim oPatronAttr, rsPatronAttr
@@ -555,6 +591,55 @@ Public Function HasSixtyHours(ByVal PatronKey, ByVal atDate)
 		End If
 	End If
 	
+End Function
+
+' Looks for cancellations from current students, null otherwise
+Public Function CurrentResidentCancellation(ByVal PatronKey, ByVal TermKey)
+
+	Dim oHMS, rsPatronApplications
+	Set oHMS = GetClass("HMSDBSrv.ApplicationRead")
+	Set rsPatronApplications = oHMS.GetPatronApplication(GetUserSession("StaffToken"), ,PatronKey,,,,TermKey)
+	
+	rsPatronApplications.Filter = "(Term_Key="& TermKey & " AND " & _
+			"SubmittedDate<>Null AND CancelledDate=Null AND ApplicationType_Key=6)"  & _
+			" OR (Term_Key="& TermKey & " AND CancelledDate<>Null AND ApplicationType_Key=8)"
+	
+	If rsPatronApplications.EOF = True Then
+		CurrentResidentCancellation = Null
+	Else
+		CurrentResidentCancellation = rsPatronApplications("ApplicationType_Key")
+	End If
+	
+End Function
+
+Public Function GetCancelReason(ByVal PatronKey, ByVal TermKey, ByVal atDate)
+
+	Dim oHMS, oHMS2, rsPatronApplications, rsPatronAttr, cancelReason
+	Set oHMS = GetClass("HMSDBSrv.ApplicationRead")
+	Set rsPatronApplications = oHMS.GetPatronApplication(GetUserSession("StaffToken"), ,PatronKey,,,,TermKey)
+	Set oHMS2 = GetClass("HMSDBSrv.AttributeRead")
+	Set rsPatronAttr = oHMS2.BrowsePatronAttributesAtDate(GetUserSession("StaffToken"), PatronKey, atDate)
+
+	rsPatronApplications.Filter = "(Term_Key="& TermKey & " AND " & _
+			"SubmittedDate<>Null AND CancelledDate=Null AND ApplicationType_Key=6)"  & _
+			" OR (Term_Key="& TermKey & " AND CancelledDate<>Null AND ApplicationType_Key=8)"
+
+	'if the cancellation is a returning cancellation, the cancel reason will
+	'be in the attribute, not with the application
+	If rsPatronApplications.EOF = True Then
+		'no cancellation for types passed in
+		'...how did we even get here?'
+	Else
+		GetCancelReason = rsPatronApplications("ApplCancelReasonName").Value
+		Response.write "rsPatronApplications Value:" & rsPatronApplications("ApplCancelReasonName").Value
+		If rsPatronApplications("ApplCancelReasonName").Value = "" OR _
+			 IsNull(rsPatronApplications("ApplCancelReasonName").Value) Then
+			'not in application, look in attribute'
+			rsPatronAttr.Filter = "Attribute_ID=" & cancelReason_ID
+			Response.write "Reached attribute, value:" & rsPatronAttr("Value").Value
+			GetCancelReason = rsPatronAttr("Value").Value
+		End If
+	End If
 End Function
 
 Public Function GetCancelledDate(ByVal PatronKey, ByVal TermKey)
