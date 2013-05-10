@@ -15,7 +15,7 @@ Public Function ApplyDecision(ByVal PatronKey, ByVal BCF, ByVal AssignmentDecisi
 	Const NoteType_Key = 31
 
 
-	Dim oHMS, rsPatronAttr, bSuccess, sNote
+	Dim oHMS, rsPatronAttr, bSuccess, bSuccess2, sNote
 
 	Set oHMS = GetClass("HMSDBSrv.PatronWrite")
 	bSuccess = True
@@ -26,14 +26,18 @@ Public Function ApplyDecision(ByVal PatronKey, ByVal BCF, ByVal AssignmentDecisi
 					vFailed)
 	End If
 
-	' Return early on failure 
-	If bSuccess = False Then ApplyDecision = False
 
-	bSuccess = oHMS.InsertAttributeValue(GetUserSession("StaffToken"), _
+	If bSuccess = False Then 
+		ApplyDecision = False
+	End If
+
+	bSuccess2 = oHMS.InsertAttributeValue(GetUserSession("StaffToken"), _
 					PatronKey, Processed_ID, startDate, endDate, _
 					"Yes", vFailed)
 	
-	If bSuccess = False Then ApplyDecision = False	
+	If Not (bSuccess AND bSuccess2) Then
+		Err.Raise vbObjectError + 9999, "Apply Decision", "InsertAttributeValue() failed"
+	End If
 	
 	If inventorySheet = True Then
 		sNote = "Received inventory sheet. "
