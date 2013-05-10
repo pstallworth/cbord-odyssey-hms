@@ -67,8 +67,9 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	Const sValidReason = "Not Attending SFA"
 	Const cancelReason_ID = 4026
 	Dim pDate, cType, cReason
+
 	'moving these two up here to avoid multiple calls'
-	cType = CurrentResidentCancellation(lPatronKey, lTermKey) ' inefficient
+	cType = CurrentResidentCancellation(lPatronKey, lTermKey)
 	cReason = GetCancelReason(lPatronKey, lTermKey, atDate)
 
 	If IsSuspended(lPatronKey, atDate) = True Then
@@ -81,22 +82,23 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 		sDecision = "Not eligible for admission. §18"
 		sDepositDecision = "Refund." ' Contract Sec 18
 	ElseIf Not IsNull(cType) AND _
-				StrComp(cReason, "Not Attending SFA", 1) <> 0 Then
-
-		Response.write "Cancellation type matches 6 or 8<br />"
-
+				StrComp(cReason, sValidreason, 1) <> 0 Then
 
 		'Need to come full stop if either of these next two occur
 		'as it means paperwork / data entry hasn't been done correctly
-		Response.write "cReason:" & cReason & "<br />"
 		Assert Not IsNull(cReason), "Cancel reason cannot be null or missing"
 		Assert cReason <> "", "Cancel reason cannot be empty"
 
-
-		If StrComp(cReason, sValidReason, 1) = 0 Then
-			Response.write "Cancel reason is not attending"
+		'either 60/21 or applying for OC permit'
+		If getOCPermitStatus(lPatronKey, atDate, , "") = "Pending" Then
+			sDepositDecision = "Do not process."
+			sDecision = "Student has pending OC permit."
+		ElseIf getOCPermitStatus(lPatronKey, atDate, , "") = "Completed" Then
+			sDepositDecision = "Refund."
+			sDecision = "Student has OC permit."
 		Else
-			Response.write "Cancel reason 60/21 or permit, investigate"
+			sDepositDecision = "Hold for review."
+			sDecision = "Student does not meet requirements to live off-campus, needs review."
 		End If
 
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
@@ -631,13 +633,20 @@ Public Function GetCancelReason(ByVal PatronKey, ByVal TermKey, ByVal atDate)
 		'...how did we even get here?'
 	Else
 		GetCancelReason = rsPatronApplications("ApplCancelReasonName").Value
-		Response.write "rsPatronApplications Value:" & rsPatronApplications("ApplCancelReasonName").Value
 		If rsPatronApplications("ApplCancelReasonName").Value = "" OR _
 			 IsNull(rsPatronApplications("ApplCancelReasonName").Value) Then
-			'not in application, look in attribute'
-			rsPatronAttr.Filter = "Attribute_ID=" & cancelReason_ID
-			Response.write "Reached attribute, value:" & rsPatronAttr("Value").Value
-			GetCancelReason = rsPatronAttr("Value").Value
+			'verify data correctly entered'
+			If rsPatronApplications("ApplicationType_Key").Value = 8 Then
+				'Force user to correct student record'
+				Err.Raise vbObjectError + 9990, "Renewal Cancellation", "Incorrectly filled out renewal cancellation"
+			Else
+				'otherwise check the attribute'
+				rsPatronAttr.Filter = "Attribute_ID=" & cancelReason_ID
+				If IsNull(rsPatronAttr("Value").Value) OR rsPatronAttr("Value").Value = "" Then
+					Err.Raise vbObjectError + 9991, "Returning Cancellation", "Missing cancel reason attribute"
+				End If
+				GetCancelReason = rsPatronAttr("Value").Value
+			End If
 		End If
 	End If
 End Function
