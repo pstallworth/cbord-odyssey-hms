@@ -86,7 +86,9 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 		sDecision = "Not eligible for admission. §18"
 		sDepositDecision = "Refund." ' Contract Sec 18
 	ElseIf Not IsNull(cType) AND _
-				StrComp(cReason, sValidreason, 1) <> 0 Then
+				StrComp(cReason, sValidreason, 1) <> 0 AND _
+				(HasSixtyHours(lPatronKey, atDate) = False AND _
+				IsTwentyOne(lPatronKey, lTermKey) = False) Then
 
 		'Need to come full stop if either of these next two occur
 		'as it means paperwork / data entry hasn't been done correctly
@@ -102,7 +104,8 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 			sDecision = "Student has OC permit."
 		Else
 			sDepositDecision = "Hold for review."
-			sDecision = "Student does not meet requirements to live off-campus, needs review."
+			sDecision = "Student does not have 60 hours, will not be 21 by semester."
+
 		End If
 
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
