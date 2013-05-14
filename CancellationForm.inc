@@ -567,13 +567,13 @@ Public Function IsTwentyOne(ByVal PatronKey, ByVal TermKey)
 	
 	dAge = DateDiff("yyyy",rsPatron("Birthdate").Value,censusDate)
 	
-	If (Month(censusDate) > Month(rsPatron("Birthdate").value)) Then
+	If (Month(rsPatron("Birthdate").value) > Month(censusDate)) Then
 		dAge = dAge - 1
 	Elseif (Month(censusDate) = Month(rsPatron("Birthdate").value)) AND _
-			Day(rsPatron("Birthdate").value) > Day(censusDate) Then
+			Day(rsPatron("Birthdate").value > Day(censusDate) ) Then
 		dAge = dAge - 1
 	End If
-		
+
 	If (dAge >= 21) Then 
 		IsTwentyOne = True
 	Else
