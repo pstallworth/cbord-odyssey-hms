@@ -104,7 +104,7 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 			sDecision = "Student has OC permit."
 		Else
 			sDepositDecision = "Hold for review."
-			sDecision = "Student does not have 60 hours, will not be 21 by semester."
+			sDecision = "Student does not have 60 hours, will not be 21 by census date."
 
 		End If
 
@@ -570,7 +570,7 @@ Public Function IsTwentyOne(ByVal PatronKey, ByVal TermKey)
 	If (Month(censusDate) > Month(rsPatron("Birthdate").value)) Then
 		dAge = dAge - 1
 	Elseif (Month(censusDate) = Month(rsPatron("Birthdate").value)) AND _
-			Day(censusDate) > Day(rsPatron("Birthdate").value) Then
+			Day(rsPatron("Birthdate").value) > Day(censusDate) Then
 		dAge = dAge - 1
 	End If
 		
