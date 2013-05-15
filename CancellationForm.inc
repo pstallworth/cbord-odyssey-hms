@@ -566,14 +566,14 @@ Public Function IsTwentyOne(ByVal PatronKey, ByVal TermKey)
 	censusDate = rsTerms("CensusDate").Value
 	
 	dAge = DateDiff("yyyy",rsPatron("Birthdate").Value,censusDate)
-	
+	Response.write "1: dAge" & dAge
 	If (Month(rsPatron("Birthdate").value) > Month(censusDate)) Then
 		dAge = dAge - 1
-	Elseif (Month(censusDate) = Month(rsPatron("Birthdate").value)) AND _
-			Day(rsPatron("Birthdate").value > Day(censusDate) ) Then
+	Elseif (CInt(Month(censusDate)) = CInt(Month(rsPatron("Birthdate").value))) AND _
+			(CInt(Day(rsPatron("Birthdate").value) > CInt(Day(censusDate)))) Then
 		dAge = dAge - 1
 	End If
-
+	Response.write "Final dAge:" & dAge
 	If (dAge >= 21) Then 
 		IsTwentyOne = True
 	Else
