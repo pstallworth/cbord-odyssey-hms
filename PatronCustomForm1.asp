@@ -150,7 +150,11 @@
 			'ProcessAssignment lPatronKey, lTermKey, sTermRelative, dStart, dDisplayDate, sAssignmentMessage
 			ProcessAssignment lPatronKey, lTermKey, sTermRelative, dStart, dEnd, sAssignmentMessage
 			
-			text = Split(sAssignmentMessage)
+			If sAssignmentMessage <> "" Then
+				text = Split(sAssignmentMessage)
+			Else
+				text(0) = ""
+			End If
 				
 			DetermineDeposit lPatronKey, lTermKey, GetCancelledDate(lPatronKey, lTermKey), sTermRelative, _
 							GetSubmittedDate(lPatronKey, lTermKey), dStart, sDecision, sDepositDecision
@@ -314,7 +318,7 @@ ElseIf bCancelled = True Then
 	Response.write "<form name=""apply_decision"" action=""PatronCustomForm1.asp"" method=""POST"">" & vbCrLf
 	Response.write "<input type=""hidden"" name=""apply"" value=""1"">" & vbCrLf
 	Response.write "<input type=""checkbox"" class=""inventory"" name=""inventory"" value=""1""> Received inventory sheet<br />" & vbCrLf
-	Response.write "<input type=""submit"" class=""apply_decisions"" value=""Apply Decisions"">" & vbCrLf
+	Response.write "<input type=""submit"" class=""apply_decisions"" value=""Apply Decisions"" onClick=""window.print()"">" & vbCrLf
 	Response.write "</form>" & vbCrLf
 	Response.write "</div>" & vbCrlf & vbCrLf
 Else

@@ -77,13 +77,13 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	cReason = GetCancelReason(lPatronKey, lTermKey, atDate)
 
 	If IsSuspended(lPatronKey, atDate) = True Then
-		sDecision = "Academic Suspension. ï¿½17C3"
+		sDecision = "Academic Suspension. §17C3"
 		sDepositDecision = "Refund." ' Contract Sec. 17C3
 	Elseif IsDisciplineSuspension(lPatronKey, atDate) = True Then
-		sDecision = "Discipline suspension.  ï¿½17C1"
+		sDecision = "Discipline suspension.  §17C1"
 		sDepositDecision = "Forfeit." ' Contract Sec. 17C1
 	Elseif IsRejected(lPatronKey, atDate) = True Then
-		sDecision = "Not eligible for admission. ï¿½18"
+		sDecision = "Not eligible for admission. §18"
 		sDepositDecision = "Refund." ' Contract Sec 18
 	ElseIf Not IsNull(cType) AND _
 				StrComp(cReason, sValidreason, 1) <> 0 AND _
@@ -110,7 +110,7 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
 		If TermIndicator = "Future" Then ' 17A
-			sDecision = "Cancelled on or before deadline. ï¿½17A"
+			sDecision = "Cancelled on or before deadline. §17A"
 			sDepositDecision = "Refund."
 			If getOCPermitStatus(lPatronKey, atDate, , "") = "Pending" Then
 				sDepositDecision = "Do not process." ' Not specified in contract
@@ -130,11 +130,14 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 				End If
 			Elseif isGraduating(lTermKey, lPatronKey) = True Then
 				sDepositDecision = "Refund." ' Contract Sec 17B6
-				sDecision = "Student is graduating. ï¿½17B6"
+				sDecision = "Student is graduating. §17B6"
 			Else
 				sDepositDecision = "Refund."
 				sDecision = "Student cancelled before deadline..."
 			End If
+		Else
+			sDecision = "Cancelled before deadline, processed after term?"
+			sDepositDecision = "Refund."
 		End If
 	Else
 		sDepositDecision = "Forfeit." ' Contract Sec 17A
@@ -160,6 +163,9 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 				sDepositDecision = "Forfeit."
 				sDecision = "Student cancelled after deadline."
 			End If
+		Else
+			sDecision = "Cancelled after deadline, processed after term?"
+			sDepositDecision = "Forfeit."
 		End If
 	End If
 End Sub
@@ -171,18 +177,18 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 '	If IsSuspended(PatronKey, atDate) = True Then
 '		DetermineBreakContractFee = "No, academic suspension." ' Contract Sec. 17C3
 	If IsDisciplineSuspension(PatronKey, endDate) = True Then
-		DetermineBreakContractFee = "No, discipline suspension. ï¿½17C1" ' Contract Sec. 17C1
+		DetermineBreakContractFee = "No, discipline suspension. §17C1" ' Contract Sec. 17C1
 	Elseif IsRejected(PatronKey, atDate) = True Then
-		DetermineBreakContractFee = "No, not eligible for admission. ï¿½18" ' Contract Sec. 18, doesn't mention CBF
+		DetermineBreakContractFee = "No, not eligible for admission. §18" ' Contract Sec. 18, doesn't mention CBF
 	Else
 		If TermIndicator = "Future" Then
-			DetermineBreakContractFee = "No ï¿½17A" ' Contract Section 17A
+			DetermineBreakContractFee = "No §17A" ' Contract Section 17A
 		Else
 			If getOCPermitStatus(PatronKey, atDate, , pDate) = "Completed" Then
 				If DateDiff("d", GetDeadline(TermKey), pDate) >= 0 AND _
 					DateDiff("d", pDate, GetClassesStart(TermKey)) >= 0 Then
 					'student received permit before classes start and cancelled before deadline
-					DetermineBreakContractFee = "No, has OC permit.  ï¿½17B2"
+					DetermineBreakContractFee = "No, has OC permit.  §17B2"
 				Else
 					'student either cancelled after deadline or received permit after deadline
 				DetermineBreakContractFee = "Yes." ' Contract Section 17B2
@@ -197,7 +203,7 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 					If dActualStart <> "" AND dActualEnd <> "" Then ' 
 						If DateDiff("d", dActualStart, dActualEnd) < MaxAssignLengthBeforeCBF AND _ 
 							DateDiff("d", dActualStart, atDate) <= MaxAssignLengthBeforeCBF Then
-							DetermineBreakContractFee = "No, checked out on opening day. ï¿½17B4"
+							DetermineBreakContractFee = "No, checked out on opening day. §17B4"
 						Else
 							DetermineBreakContractFee = "Yes, checked out during semester."
 						End If
@@ -251,14 +257,16 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 			Elseif IsEnrolled(PatronKey, startDate) = False Then
 				AssignmentMessage = AssignmentMessage & "is not enrolled, prorate charges."
 			Else
-				AssignmentMessage = "Don't change contract, don't change charges, student still enrolled. ï¿½17B5"
+				AssignmentMessage = "Don't change contract, don't change charges, student still enrolled. §17B5"
 			End If
 
 		Elseif IsAssigned(Patronkey, startDate, atDate, contractState) = 1 Then
-			AssignmentMessage = "ï¿½Multiple active assignments for term!"
+			AssignmentMessage = "¡Multiple active assignments for term!"
 		Else
 			AssignmentMessage = "Student not assigned for term. Verify no charges on account."
 		End If
+	Else
+		AssignmentMessage = "Is this cancellation for a past semester?"
 	End If
 
 End Sub
