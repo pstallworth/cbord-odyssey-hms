@@ -85,8 +85,7 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	Elseif IsRejected(lPatronKey, atDate) = True Then
 		sDecision = "Not eligible for admission. §18"
 		sDepositDecision = "Refund." ' Contract Sec 18
-	ElseIf Not IsNull(cType) AND _
-				StrComp(cReason, sValidreason, 1) <> 0 AND _
+	ElseIf StrComp(cReason, sValidreason, 1) <> 0 AND _
 				(HasSixtyHours(lPatronKey, atDate) = False AND _
 				IsTwentyOne(lPatronKey, lTermKey) = False) Then
 
@@ -639,6 +638,7 @@ Public Function GetCancelReason(ByVal PatronKey, ByVal TermKey, ByVal atDate)
 
 	rsPatronApplications.Filter = "(Term_Key="& TermKey & " AND " & _
 			"SubmittedDate<>Null AND CancelledDate=Null AND ApplicationType_Key=6)"  & _
+			" OR (Term_Key="& TermKey & " AND CancelledDate<>Null AND ApplicationType_Key=1)" & _
 			" OR (Term_Key="& TermKey & " AND CancelledDate<>Null AND ApplicationType_Key=8)"
 
 	'if the cancellation is a returning cancellation, the cancel reason will
