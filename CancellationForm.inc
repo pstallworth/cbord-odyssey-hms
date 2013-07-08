@@ -57,6 +57,7 @@ End Function
 ' may need to look at adding an isenrolled() test at the bottom
 ' and just like hasApp, if it's true hold the deposit in case of loophole
 ' students
+' 6/10/13: include new students in the test below (5/7)
 ' 5/7/13: per discussion with D'nese, we need to look at the cancel reason
 ' and if the student is 21/60, and not process if not eligible to live off
 ' campus and reason is not "not attending"
@@ -70,7 +71,13 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 
 	Const sValidReason = "Not Attending SFA"
 	Const cancelReason_ID = 4026
-	Dim pDate, cType, cReason
+	Dim pDate, cType, cReason, bCancelledByDeadline
+	
+	If DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
+		bCancelledByDeadline = True
+	Else
+		bCancelledByDeadline = False
+	End If
 
 	'moving these two up here to avoid multiple calls'
 	cType = CurrentResidentCancellation(lPatronKey, lTermKey)
@@ -87,25 +94,17 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 		sDepositDecision = "Refund." ' Contract Sec 18
 	ElseIf StrComp(cReason, sValidreason, 1) <> 0 AND _
 				(HasSixtyHours(lPatronKey, atDate) = False AND _
-				IsTwentyOne(lPatronKey, lTermKey) = False) Then
+				IsTwentyOne(lPatronKey, lTermKey) = False) AND _
+				getOCPermitStatus(lPatronKey, atDate, , "") = False Then
 
 		'Need to come full stop if either of these next two occur
 		'as it means paperwork / data entry hasn't been done correctly
 		Assert Not IsNull(cReason), "Cancel reason cannot be null or missing"
 		Assert cReason <> "", "Cancel reason cannot be empty"
 
-		'either 60/21 or applying for OC permit'
-		If getOCPermitStatus(lPatronKey, atDate, , "") = "Pending" Then
-			sDepositDecision = "Do not process."
-			sDecision = "Student has pending OC permit."
-		ElseIf getOCPermitStatus(lPatronKey, atDate, , "") = "Completed" Then
-			sDepositDecision = "Refund."
-			sDecision = "Student has OC permit."
-		Else
-			sDepositDecision = "Hold for review."
-			sDecision = "Student does not have 60 hours, will not be 21 by census date."
+		sDepositDecision = "Hold for review."
+		sDecision = "Student does not have 60 hours, will not be 21 by census date."
 
-		End If
 
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
 		If TermIndicator = "Future" Then ' 17A
@@ -609,6 +608,7 @@ Public Function HasSixtyHours(ByVal PatronKey, ByVal atDate)
 	
 End Function
 
+' DEPRECATED AS OF 6/10/13, commit 18ece82
 ' Looks for cancellations from current students, null otherwise
 Public Function CurrentResidentCancellation(ByVal PatronKey, ByVal TermKey)
 
@@ -698,9 +698,9 @@ Public Function GetSubmittedDate(ByVal PatronKey, ByVal TermKey)
 	Set rsPatronApplications = oPatronAttr.GetPatronApplication(GetUserSession("StaffToken"), ,PatronKey,,,,TermKey)
 
 
-	rsPatronApplications.Filter = "(Term_Key="& TermKey & " AND " & "CancelledDate=Null" & _
+	rsPatronApplications.Filter = "(Term_Key="& TermKey & " AND " & "SubmittedDate<>Null" & _
 			" AND ApplicationType_Key=1) OR (Term_Key="& TermKey & " AND " & _
-			"CancelledDate=Null AND ApplicationType_Key=8)"  
+			"SubmittedDate<>Null AND ApplicationType_Key=8)"  
 
 	If rsPatronApplications.EOF = True Then
 		'Student doesn't have cancellation, so we need to break out here
