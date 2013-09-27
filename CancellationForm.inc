@@ -92,7 +92,8 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	Elseif IsRejected(lPatronKey, atDate) = True Then
 		sDecision = "Not eligible for admission. §18"
 		sDepositDecision = "Refund." ' Contract Sec 18
-	ElseIf StrComp(cReason, sValidreason, 1) <> 0 AND _
+	ElseIf	DateDiff("d", Now(), GetClassesStart(lTermKey)) >= 0 AND _
+				StrComp(cReason, sValidreason, 1) <> 0 AND _
 				(HasSixtyHours(lPatronKey, atDate) = False AND _
 				IsTwentyOne(lPatronKey, lTermKey) = False) AND _
 				getOCPermitStatus(lPatronKey, atDate, , "") = False Then
@@ -105,7 +106,7 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 		sDepositDecision = "Hold for review."
 		sDecision = "Student does not have 60 hours, will not be 21 by census date."
 
-
+	'Cancelled before the deadline
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
 		If TermIndicator = "Future" Then ' 17A
 			sDecision = "Cancelled on or before deadline. §17A"
@@ -114,15 +115,15 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 				sDepositDecision = "Do not process." ' Not specified in contract
 				sDecision = "Student has pending OC permit."
 			End If
-		Elseif TermIndicator = "Current" Then
-			sDepositDecision = "Refund."
-			If getOCPermitStatus(lPatronKey, atDate, , pDate) = "Completed" Then
+		Elseif TermIndicator = "Current" Then ' 17B
+			sDepositDecision = "Refund." ' The default since cancelled before deadline
+			If GetTermName(lTermKey) = "Spring" AND getOCPermitStatus(lPatronKey, atDate, , pDate) = "Completed" Then
 				If DateDiff("d", pDate, GetClassesStart(lTermKey)) >= 0 Then
 					'student cancelled before deadline and received permit before classes started
 					sDepositDecision = "Refund." 'Contract Sec 17B2
 					sDecision = "Student has OC permit."
 				Else
-					'student either cancelled after deadline or received permit after deadline
+					'student either cancelled after deadline or received permit after classes start
 					sDepositDecision = "Forfeit."
 					sDecision = "Student received OC permit after first day of classes."
 				End If
@@ -182,30 +183,32 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 		If TermIndicator = "Future" Then
 			DetermineBreakContractFee = "No §17A" ' Contract Section 17A
 		Else
-			If getOCPermitStatus(PatronKey, atDate, , pDate) = "Completed" Then
+			If GetTermName(lTermKey) = "Spring" AND getOCPermitStatus(PatronKey, atDate, , pDate) = "Completed" Then
 				If DateDiff("d", GetDeadline(TermKey), pDate) >= 0 AND _
 					DateDiff("d", pDate, GetClassesStart(TermKey)) >= 0 Then
 					'student received permit before classes start and cancelled before deadline
 					DetermineBreakContractFee = "No, has OC permit.  §17B2"
 				Else
 					'student either cancelled after deadline or received permit after deadline
-				DetermineBreakContractFee = "Yes." ' Contract Section 17B2
+					DetermineBreakContractFee = "Yes." ' Contract Section 17B2
 				End If
 			Else
 				If IsAssigned(PatronKey, atDate, endDate, "") = True Then
 					Dim dActualStart, dActualEnd
 					GetContractActualDates PatronKey, atDate, endDate, dActualStart, dActualEnd
+					'Problem here if it comes back  with Multiple Assignments
 					
+					' TODO Fix this section below, it is broken
 					' If they remove their belongings on day facility opens,
 					' then there is no BCF, otherwise there is.
-					If dActualStart <> "" AND dActualEnd <> "" Then ' 
+					If Not IsEmpty(dActualStart) AND Not IsEmpty(dActualEnd) Then ' 
 						If DateDiff("d", dActualStart, dActualEnd) < MaxAssignLengthBeforeCBF AND _ 
 							DateDiff("d", dActualStart, atDate) <= MaxAssignLengthBeforeCBF Then
 							DetermineBreakContractFee = "No, checked out on opening day. §17B4"
 						Else
 							DetermineBreakContractFee = "Yes, checked out during semester."
 						End If
-					Elseif dActualStart <> "" Then
+					Elseif Not IsEmpty(dActualStart) Then
 						DetermineBreakContractFee = "Yes, student not yet checked out."
 					Else
 						DetermineBreakContractFee = "No, never checked in."
@@ -219,15 +222,17 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 End Function
 
 'atDate should be term start
-Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal startDate, ByVal atDate, ByRef AssignmentMessage)
+Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal startDate, ByVal atDate, ByRef AssignmentMessage, ByRef ChargeMessage)
 
 	Dim contractState, actualStart, actualEnd
 
 	If TermIndicator = "Future" Then
 		If IsAssigned(PatronKey, startDate, startDate + 1, contractState) = True Then
 			AssignmentMessage = "Cancel assignment, void charges."
+			ChargeMessage = "Void charges."
 		Else
 			AssignmentMessage = "No assignment, verify no charges."
+			ChargeMessage = "Verify no charges on account."
 		End If
 	Elseif TermIndicator = "Current" Then
 		If IsAssigned(PatronKey, startDate, atDate, contractState) = True Then
@@ -244,24 +249,31 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 			
 			If IsDisciplineSuspension(PatronKey, atDate) = True Then
 				AssignmentMessage = AssignmentMessage & "discipline suspension, keep charges on account."
+				ChargeMessage = "Keep charges on account."
 			Elseif getOCPermitStatus(PatronKey, startDate, , "") = "Completed" Then
 				AssignmentMessage = AssignmentMessage & "has OC permit, prorate charges."
+				ChargeMessage = "Prorate charges."
 			Elseif getOCPermitStatus(PatronKey, startDate, , "") = "Pending" Then
 				AssignmentMessage = "Do not process, student has pending off-campus permit, awaiting decision."
 			Elseif IsTwentyOne(PatronKey, TermKey) = True Then
 				AssignmentMessage = AssignmentMessage & "is 21 yrs old, prorate charges."
+				ChargeMessage = "Prorate charges."
 			Elseif HasSixtyHours(PatronKey, startDate) = True Then
 				AssignmentMessage = AssignmentMessage & "has 60 earned hours, prorate charges."
+				ChargeMessage = "Prorate charges."
 			Elseif IsEnrolled(PatronKey, startDate) = False Then
 				AssignmentMessage = AssignmentMessage & "is not enrolled, prorate charges."
+				ChargeMessage = "Prorate charges."
 			Else
 				AssignmentMessage = "Don't change contract, don't change charges, student still enrolled. §17B5"
+				ChargeMessage = "Don't change charges, still enrolled."
 			End If
 
 		Elseif IsAssigned(Patronkey, startDate, atDate, contractState) = 1 Then
 			AssignmentMessage = "¡Multiple active assignments for term!"
 		Else
 			AssignmentMessage = "Student not assigned for term. Verify no charges on account."
+			ChargeMessage = "Verify no charges on account."
 		End If
 	Else
 		AssignmentMessage = "Is this cancellation for a past semester?"
@@ -374,19 +386,20 @@ End Function
 ' then we exit.  Otherwise we retrieve the actual start and end dates.  In
 ' the case of multiple active contracts, we report that instead to notify
 ' the user.
-Sub GetContractActualDates(ByVal PatronKey, atDate, DisplayDate, ByRef ActualStart, ByRef ActualEnd)
+Sub GetContractActualDates(ByVal PatronKey, startDate, endDate, ByRef ActualStart, ByRef ActualEnd)
 
 	Dim oContractRead, rsElements, contractCount
 	Set oContractRead = GetClass("HMSDBSrv.ContractRead")
-	Set rsElements = oContractRead.GetContractElements(GetUserSession("StaffToken"), lPatronKey, atDate, DisplayDate)
+	Set rsElements = oContractRead.GetContractElements(GetUserSession("StaffToken"), lPatronKey, startDate, endDate)
 
-	ActualStart = ""
-	ActualEnd = ""
+	ActualStart = vbEmpty
+	ActualEnd = vbEmpty
 	contractCount = 0
 	If rsElements.EOF = False Then 
 		Do Until rsElements.EOF
 			If Not IsNull(rsElements("Facility_Key")) Then
 				If (rsElements("State_ID") = 1 Or rsElements("State_ID") = 2) Then
+				Response.write "Found active contract<br />"
 					contractCount = contractCount + 1
 					ActualStart = rsElements("ActualUseStart").Value
 					ActualEnd = rsElements("ActualUseEnd").Value
@@ -398,7 +411,7 @@ Sub GetContractActualDates(ByVal PatronKey, atDate, DisplayDate, ByRef ActualSta
 		Exit Sub
 	End If
 
-	If contractCount = 1 Then
+		If contractCount = 1 Then
 		Exit Sub
 	Elseif contractCount > 1 Then 'Hmm, need to report this
 		ActualStart = "Multiple active assignments"
@@ -406,22 +419,51 @@ Sub GetContractActualDates(ByVal PatronKey, atDate, DisplayDate, ByRef ActualSta
 		Exit Sub
 	End If
 	
-	rsElements.MoveFirst
 	
+	'If now() is in the current term, we should check for a contract now thru
+	'end of term, otherwise we should look for a term from start thru now
+	
+	rsElements.MoveFirst
+	contractCount = 0
 	If rsElements.EOF = False Then 
 		Do Until rsElements.EOF
 			If Not IsNull(rsElements("Facility_Key")) Then
 				If rsElements("State_ID") = 4 OR rsElements("State_ID") = 6 Then
+					contractCount = contractCount + 1
 					ActualStart = rsElements("ActualUseStart").Value
 					ActualEnd = rsElements("ActualUseEnd").Value
-					Exit Do
 				End If
 			End If
 			rsElements.MoveNext
 		Loop
 	End If
-	
+
 End Sub
+
+Public Function GetTermName(ByVal TermKey)
+
+	Dim oHMS, rsTerms, termName, termDesc
+	Set oHMS = GetClass("HMSDBSrv.TermRead")
+	Set rsTerms = oHMS.GetTerms(GetUserSession("StaffToken"), TermKey)
+	
+	rsTerms.Filter = "Term_Key=" & TermKey
+	
+	If rsTerms.EOF = True Then
+		Response.redirect "Error.asp?Error=Must select a term for this to work."
+	End If
+	
+	termName = rsTerms("Name").Value
+	termDesc = Split(rsTerms("Description").Value)
+	
+	If termDesc(0) = "Spring" AND Right(termName, 2) = "20" Then
+		GetTermName = "Spring"
+	Elseif termDesc(0) = "Fall" AND Right(termName, 2) = "10" Then
+		GetTermName = "Fall"
+	Else
+		GetTermName = False
+	End If
+	
+End Function
 
 Public Function IsAssigned(ByVal PatronKey, ByVal atDate, ByVal endDate, ByRef contractState) 'missing a parameter here that is global
 

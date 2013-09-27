@@ -1,0 +1,68 @@
+#footer {
+	border-top: none !important;
+}
+#custom_footer {
+	display: inline;
+	margin-left: 1.0em;
+}
+body {
+	color: black !important;
+	font-size: 100%;
+}
+a {
+	color: black !important;
+}
+h1 {
+	color: black !important;
+}
+#sidebar {
+   display: none;
+}
+ul.decision li {
+	list-style: none;
+	background-color: white;
+	color: black;
+	padding: 0.0em 0.0em 0.0em 0.0em;
+	margin: 0.0em 0.0em 0.0em 0.0em;
+	width: 75%;
+	border-radius: 5px;
+}
+
+input.apply_decisions {
+	display: none;
+}
+
+#debug {
+	display: block;
+	background-color: white;
+	width: 400px;
+	margin: 0.0em 0.0em 0.0em 0.7em;
+	font-size: 75%;
+}
+
+a.debug {
+	margin: 0.0em 0.0em 0.0em 0.7em;
+}
+a.button_style {
+    display: none;
+}
+
+span#PageHeaderDetailLeft {
+	display: none;
+}
+span#PageHeaderDetailRight {
+	float: left;
+	width: auto;
+	text-align: left;
+}
+form[name="date_select"] input[type="submit"] {
+    display: none;
+}
+
+div.showCheckout {
+    display: none;
+}
+
+div.hideCheckout {
+    display: none;
+}

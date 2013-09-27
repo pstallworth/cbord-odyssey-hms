@@ -65,6 +65,7 @@
 	Dim sDecision, sTermRelative, bHasFutureApp, dAssignedDate
 	Dim dActualStart, bProcessed
 	Dim oContractWrite, dContractEnd
+	Dim sChargeMessage
 
 	lTermKey = 0
 	sErrors = Request.QueryString("Error")
@@ -148,7 +149,7 @@
 											dStart, dDisplayDate)
 
 			'ProcessAssignment lPatronKey, lTermKey, sTermRelative, dStart, dDisplayDate, sAssignmentMessage
-			ProcessAssignment lPatronKey, lTermKey, sTermRelative, dStart, dEnd, sAssignmentMessage
+			ProcessAssignment lPatronKey, lTermKey, sTermRelative, dStart, dEnd, sAssignmentMessage, sChargeMessage
 			
 			If sAssignmentMessage <> "" Then
 				text = Split(sAssignmentMessage)
@@ -288,6 +289,7 @@ ElseIf bCancelled = True Then
 	Response.write "<li><b>Deposit:</b> " & sDepositDecision & "</li><br />" & vbCrLf
 	Response.write "<li><b>BCF:</b> " & sBCF & "</li><br />" & vbCrLf
 	Response.write "<li><b>Assignment Decision:</b> " & sAssignmentMessage & "</li><br />" & vbCrLf
+	Response.write "<li><b>Charge Decision:</b> " & sChargeMessage & "</li><br />" & vbCrLf
 	Response.write "</ul>" & vbCrLf
 
 
@@ -334,14 +336,17 @@ End if
 	Response.write "Cancellation Deadline: " & GetDeadline(lTermKey) & "<br />" & vbCrLf
 	Response.write "Cancelled Date: " & GetCancelledDate(lPatronKey, lTermKey) & "<br />" & vbCrLf
 	GetContractActualDates lPatronKey, dStart, dEnd, ActualStart, ActualEnd
+	Response.write "Is Assigned: " & IsAssigned(lPatronKey, dStart, dEnd, "") & "<br />" & vbCrLf
 	Response.write "Actual Start Date: " & ActualStart & "<br /> Actual End Date: " & ActualEnd & "<br />" & vbCrLf
 	Response.write "Academic Suspension: " & IsSuspended(lPatronKey, dStart) & "<br />" & vbCrLf
 	Response.write "Discipline Suspension: " & IsDisciplineSuspension(lPatronKey, dDisplayDate) & "<br />" & vbCrLf
 	Response.write "Admitted: " & (Not IsRejected(lPatronKey, dStart)) & "<br />" & vbCrLf
 	Response.write "Off-Campus Permit: " & getOCPermitStatus(lPatronKey, dStart, ,pDate) & "<br />" & vbCrLf
-	Response.write "Permit Date: " & pDate & "<br />" & vbCrLf
-	Response.write "Is Assigned: " & IsAssigned(lPatronKey, dStart, dEnd, "") & "<br />" & vbCrLf
-	Response.write "Is Enrolled: " & IsEnrolled(lPatronKey, dStart) & "<br />" & vbCrLf
+	Response.write "Permit Date: " & pDate & "<br />" & vbCrLf	
+	Response.write "Is Enrolled: " & IsEnrolled(lPatronKey, dStart) & vbCrLf
+	'Response.write "Has 60 Hours: " & HasSixtyHours(lPatronKey, dStart) & "<br />" & vbCrLf
+	'Response.write "Is 21 years old: " & IsTwentyOne(lPatronKey, GetClassesStart(lTermKey)) & "<br />" & vbCrLf
+
 	Response.write "</div>" & vbCrLf
 	
 	Response.Write "</div></div>" & vbCrLf
