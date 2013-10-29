@@ -221,6 +221,9 @@
 		sDecision = "Cancellation has been processed."
 	End If 'end if has been processed	
 	
+	Dim dDepositBalance, dHousingBalance
+	getBalances lPatronKey, dDepositBalance, dHousingBalance
+	
 	Dim sTitle
 	sTitle = oPage.Title
 
@@ -289,7 +292,9 @@ ElseIf bCancelled = True Then
 	Response.write "<li><b>Deposit:</b> " & sDepositDecision & "</li><br />" & vbCrLf
 	Response.write "<li><b>BCF:</b> " & sBCF & "</li><br />" & vbCrLf
 	Response.write "<li><b>Assignment Decision:</b> " & sAssignmentMessage & "</li><br />" & vbCrLf
-	Response.write "<li><b>Charge Decision:</b> " & sChargeMessage & "</li><br />" & vbCrLf
+	Response.write "<li><b>Charge Decision:</b> " & sChargeMessage & "<br />" & vbCrLf
+	Response.write "<b>Housing Balance: $</b>" & dHousingBalance & "<br />" & vbCrLf
+	Response.write "<b>Deposit Balance: $</b>" & dDepositBalance & "</li><br />" & vbCrLf
 	Response.write "</ul>" & vbCrLf
 
 
@@ -308,7 +313,7 @@ ElseIf bCancelled = True Then
 	Response.write "<input type=""submit"" value='Update Contract'>" & vbCrLf
 	Response.write "</form>" & vbCrLf
 	Response.write "</div>" & vbCrLf
-	Response.write "<br />" & vbCrLf
+	
 	
 	If sDepositDecision = "Refund." OR sDepositDecision = "Forfeit." _
 		OR sDepositDecision = "Hold." Then
@@ -344,6 +349,7 @@ End if
 	Response.write "Off-Campus Permit: " & getOCPermitStatus(lPatronKey, dStart, ,pDate) & "<br />" & vbCrLf
 	Response.write "Permit Date: " & pDate & "<br />" & vbCrLf	
 	Response.write "Is Enrolled: " & IsEnrolled(lPatronKey, dStart) & vbCrLf
+	
 	'Response.write "Has 60 Hours: " & HasSixtyHours(lPatronKey, dStart) & "<br />" & vbCrLf
 	'Response.write "Is 21 years old: " & IsTwentyOne(lPatronKey, GetClassesStart(lTermKey)) & "<br />" & vbCrLf
 
