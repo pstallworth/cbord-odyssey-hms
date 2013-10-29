@@ -84,14 +84,14 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	cReason = GetCancelReason(lPatronKey, lTermKey, atDate)
 
 	If IsSuspended(lPatronKey, atDate) = True Then
-		sDecision = "Academic Suspension. §17C3"
-		sDepositDecision = "Refund." ' Contract Sec. 17C3
+		Decision = "Academic Suspension. §17C3"
+		DepositDecision = "Refund." ' Contract Sec. 17C3
 	Elseif IsDisciplineSuspension(lPatronKey, atDate) = True Then
-		sDecision = "Discipline suspension.  §17C1"
-		sDepositDecision = "Forfeit." ' Contract Sec. 17C1
+		Decision = "Discipline suspension.  §17C1"
+		DepositDecision = "Forfeit." ' Contract Sec. 17C1
 	Elseif IsRejected(lPatronKey, atDate) = True Then
-		sDecision = "Not eligible for admission. §18"
-		sDepositDecision = "Refund." ' Contract Sec 18
+		Decision = "Not eligible for admission. §18"
+		DepositDecision = "Refund." ' Contract Sec 18
 	ElseIf	DateDiff("d", Now(), GetClassesStart(lTermKey)) >= 0 AND _
 				StrComp(cReason, sValidreason, 1) <> 0 AND _
 				(HasSixtyHours(lPatronKey, atDate) = False AND _
@@ -103,68 +103,68 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 		Assert Not IsNull(cReason), "Cancel reason cannot be null or missing"
 		Assert cReason <> "", "Cancel reason cannot be empty"
 
-		sDepositDecision = "Hold for review."
-		sDecision = "Student does not have 60 hours, will not be 21 by census date."
+		DepositDecision = "Hold for review."
+		Decision = "Student does not have 60 hours, will not be 21 by census date."
 
 	'Cancelled before the deadline
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
 		If TermIndicator = "Future" Then ' 17A
-			sDecision = "Cancelled on or before deadline. §17A"
-			sDepositDecision = "Refund."
+			Decision = "Cancelled on or before deadline. §17A"
+			DepositDecision = "Refund."
 			If getOCPermitStatus(lPatronKey, atDate, , "") = "Pending" Then
-				sDepositDecision = "Do not process." ' Not specified in contract
-				sDecision = "Student has pending OC permit."
+				DepositDecision = "Do not process." ' Not specified in contract
+				Decision = "Student has pending OC permit."
 			End If
 		Elseif TermIndicator = "Current" Then ' 17B
-			sDepositDecision = "Refund." ' The default since cancelled before deadline
+			DepositDecision = "Refund." ' The default since cancelled before deadline
 			If GetTermName(lTermKey) = "Spring" AND getOCPermitStatus(lPatronKey, atDate, , pDate) = "Completed" Then
 				If DateDiff("d", pDate, GetClassesStart(lTermKey)) >= 0 Then
 					'student cancelled before deadline and received permit before classes started
-					sDepositDecision = "Refund." 'Contract Sec 17B2
-					sDecision = "Student has OC permit."
+					DepositDecision = "Refund." 'Contract Sec 17B2
+					Decision = "Student has OC permit."
 				Else
 					'student either cancelled after deadline or received permit after classes start
-					sDepositDecision = "Forfeit."
-					sDecision = "Student received OC permit after first day of classes."
+					DepositDecision = "Forfeit."
+					Decision = "Student received OC permit after first day of classes."
 				End If
 			Elseif isGraduating(lTermKey, lPatronKey) = True Then
-				sDepositDecision = "Refund." ' Contract Sec 17B6
-				sDecision = "Student is graduating. §17B6"
+				DepositDecision = "Refund." ' Contract Sec 17B6
+				Decision = "Student is graduating. §17B6"
 			Else
-				sDepositDecision = "Refund."
-				sDecision = "Student cancelled before deadline..."
+				DepositDecision = "Refund."
+				Decision = "Student cancelled before deadline..."
 			End If
 		Else
-			sDecision = "Cancelled before deadline, processed after term?"
-			sDepositDecision = "Refund."
+			Decision = "Cancelled before deadline, processed after term?"
+			DepositDecision = "Refund."
 		End If
 	Else
-		sDepositDecision = "Forfeit." ' Contract Sec 17A
+		DepositDecision = "Forfeit." ' Contract Sec 17A
 		If TermIndicator = "Future" Then
 			If DateDiff("d", dCancelled, GetDeadline(lTermKey)) < 0 AND _
 				DateDiff("d", dCancelled, atDate) >= 0 AND _
 				DateDiff("d", dSubmittedDate, GetDeadline(lTermKey)) < 0 Then
 	
-				sDepositDecision = "Refund."
-				sDecision = "Student cancelled before term, submitted application after deadline."
+				DepositDecision = "Refund."
+				Decision = "Student cancelled before term, submitted application after deadline."
 			Else
-				sDepositDecision = "Forfeit."
-				sDecision = "Student cancelled after deadline."
+				DepositDecision = "Forfeit."
+				Decision = "Student cancelled after deadline."
 			End if
 		Elseif TermIndicator = "Current" Then
 			If DateDiff("d", dCancelled, GetDeadline(lTermKey)) < 0 AND _
 				DateDiff("d", dCancelled, atDate) >= 0 AND _
 				DateDiff("d", dSubmittedDate, GetDeadline(lTermKey)) < 0 Then
 	
-				sDepositDecision = "Refund."
-				sDecision = "Student cancelled before term, submitted application after deadline."
+				DepositDecision = "Refund."
+				Decision = "Student cancelled before term, submitted application after deadline."
 			Else
-				sDepositDecision = "Forfeit."
-				sDecision = "Student cancelled after deadline."
+				DepositDecision = "Forfeit."
+				Decision = "Student cancelled after deadline."
 			End If
 		Else
-			sDecision = "Cancelled after deadline, processed after term?"
-			sDepositDecision = "Forfeit."
+			Decision = "Cancelled after deadline, processed after term?"
+			DepositDecision = "Forfeit."
 		End If
 	End If
 End Sub
@@ -248,31 +248,31 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 			End If
 			
 			If IsDisciplineSuspension(PatronKey, atDate) = True Then
-				AssignmentMessage = AssignmentMessage & "discipline suspension, keep charges on account."
+				AssignmentMessage = AssignmentMessage & "discipline suspension."
 				ChargeMessage = "Keep charges on account."
 			Elseif getOCPermitStatus(PatronKey, startDate, , "") = "Completed" Then
-				AssignmentMessage = AssignmentMessage & "has OC permit, prorate charges."
+				AssignmentMessage = AssignmentMessage & "has OC permit."
 				ChargeMessage = "Prorate charges."
 			Elseif getOCPermitStatus(PatronKey, startDate, , "") = "Pending" Then
 				AssignmentMessage = "Do not process, student has pending off-campus permit, awaiting decision."
 			Elseif IsTwentyOne(PatronKey, TermKey) = True Then
-				AssignmentMessage = AssignmentMessage & "is 21 yrs old, prorate charges."
+				AssignmentMessage = AssignmentMessage & "is 21 yrs old."
 				ChargeMessage = "Prorate charges."
 			Elseif HasSixtyHours(PatronKey, startDate) = True Then
-				AssignmentMessage = AssignmentMessage & "has 60 earned hours, prorate charges."
+				AssignmentMessage = AssignmentMessage & "has 60 earned hours."
 				ChargeMessage = "Prorate charges."
 			Elseif IsEnrolled(PatronKey, startDate) = False Then
-				AssignmentMessage = AssignmentMessage & "is not enrolled, prorate charges."
+				AssignmentMessage = AssignmentMessage & "is not enrolled."
 				ChargeMessage = "Prorate charges."
 			Else
-				AssignmentMessage = "Don't change contract, don't change charges, student still enrolled. §17B5"
+				AssignmentMessage = "Don't change contract, student still enrolled. §17B5"
 				ChargeMessage = "Don't change charges, still enrolled."
 			End If
 
 		Elseif IsAssigned(Patronkey, startDate, atDate, contractState) = 1 Then
 			AssignmentMessage = "¡Multiple active assignments for term!"
 		Else
-			AssignmentMessage = "Student not assigned for term. Verify no charges on account."
+			AssignmentMessage = "Student not assigned for term."
 			ChargeMessage = "Verify no charges on account."
 		End If
 	Else
@@ -820,6 +820,19 @@ Public Function hasFutureApp(ByVal PatronKey, ByVal TermKey)
 	hasFutureApp = False
 	
 End Function
+
+'getBalances - returns both the deposit balance and housing balance on file
+Sub getBalances(ByVal PatronKey, ByRef depositBalance, ByRef housingBalance)
+
+	Dim oHMS, rsPatron
+	
+	Set oHMS = GetClass("HMSDBSrv.PatronRead")
+	Set rsPatron = oHMS.GetPatron2(GetUserSession("StaffToken"), PatronKey,,"12.1Acct1,12.4Acct1")
+	
+	depositBalance = rsPatron("12.4Acct1").Value
+	housingBalance = rsPatron("12.1Acct1").Value
+	
+End Sub
 
 Sub Assert( boolExpr, strOnFail )
         If Not boolExpr Then
