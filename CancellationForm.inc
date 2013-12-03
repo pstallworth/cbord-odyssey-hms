@@ -89,6 +89,9 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	Elseif IsDisciplineSuspension(lPatronKey, atDate) = True Then
 		Decision = "Discipline suspension.  §17C1"
 		DepositDecision = "Forfeit." ' Contract Sec. 17C1
+	ElseIf DateDiff("d", dCancelled, GetTermEnd(lTermKey)) <= 14 Then
+		Decision = "Cancelled during last two weeks of semester."
+		DepositDecision = "Refund."
 	Elseif IsRejected(lPatronKey, atDate) = True Then
 		Decision = "Not eligible for admission. §18"
 		DepositDecision = "Refund." ' Contract Sec 18
@@ -182,11 +185,13 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 	Else
 		If TermIndicator = "Future" Then
 			DetermineBreakContractFee = "No §17A" ' Contract Section 17A
-		Else
-			If GetTermName(lTermKey) = "Spring" AND getOCPermitStatus(PatronKey, atDate, , pDate) = "Completed" Then
+		Else 'term must be current
+			If DateDiff("d", GetCancelledDate(Patronkey, TermKey), GetTermEnd(TermKey)) <= 14 Then
+				DetermineBreakContractFee = "No, cancelled within last two weeks of semester."
+			Elseif GetTermName(lTermKey) = "Spring" AND getOCPermitStatus(PatronKey, atDate, , pDate) = "Completed" Then
 				If DateDiff("d", GetDeadline(TermKey), pDate) >= 0 AND _
 					DateDiff("d", pDate, GetClassesStart(TermKey)) >= 0 Then
-					'student received permit before classes start and cancelled before deadline
+					'^^ student received permit before classes start and cancelled before deadline
 					DetermineBreakContractFee = "No, has OC permit.  §17B2"
 				Else
 					'student either cancelled after deadline or received permit after deadline
@@ -279,6 +284,9 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 		AssignmentMessage = "Is this cancellation for a past semester?"
 	End If
 
+	If DateDiff("d", Now(), GetTermEnd(TermKey)) <= 14 Then
+		ChargeMessage = "No proration during last two weeks of semester."
+	End If
 End Sub
 
  
@@ -465,6 +473,20 @@ Public Function GetTermName(ByVal TermKey)
 	
 End Function
 
+Public Function GetTermEnd(ByVal TermKey)
+
+	Dim oHMS, rsTerms, termEnd
+	Set oHMS = GetClass("HMSDBSrv.TermRead")
+	Set rsTerms = oHMS.GetTerms(GetUserSession("StaffToken"), TermKey)
+	
+	rsTerms.Filter = "Term_Key=" & TermKey
+	If rsTerms.EOF = True Then
+		Response.Redirect "Error.asp?Error=Unable to look up term"
+	End If
+	
+	GetTermEnd = rsTerms("EndDate")
+	
+End Function
 Public Function IsAssigned(ByVal PatronKey, ByVal atDate, ByVal endDate, ByRef contractState) 'missing a parameter here that is global
 
 	Dim oElements, rsElements, contractCount
