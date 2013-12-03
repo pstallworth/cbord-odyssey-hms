@@ -84,19 +84,13 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	cReason = GetCancelReason(lPatronKey, lTermKey, atDate)
 
 	If IsSuspended(lPatronKey, atDate) = True Then
-		Decision = "Academic Suspension. ง17C3"
+		Decision = "Academic Suspension. ยง17C3"
 		DepositDecision = "Refund." ' Contract Sec. 17C3
 	Elseif IsDisciplineSuspension(lPatronKey, atDate) = True Then
-		Decision = "Discipline suspension.  ง17C1"
+		Decision = "Discipline suspension.  ยง17C1"
 		DepositDecision = "Forfeit." ' Contract Sec. 17C1
-<<<<<<< HEAD
-	ElseIf DateDiff("d", dCancelled, GetTermEnd(lTermKey)) <= 14 Then
-		Decision = "Cancelled during last two weeks of semester."
-		DepositDecision = "Refund."
-=======
->>>>>>> 20e1dec6676dad86a8dff89d824e97146181b690
 	Elseif IsRejected(lPatronKey, atDate) = True Then
-		Decision = "Not eligible for admission. ง18"
+		Decision = "Not eligible for admission. ยง18"
 		DepositDecision = "Refund." ' Contract Sec 18
 	ElseIf	DateDiff("d", Now(), GetClassesStart(lTermKey)) >= 0 AND _
 				StrComp(cReason, sValidreason, 1) <> 0 AND _
@@ -115,7 +109,7 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 	'Cancelled before the deadline
 	Elseif DateDiff("d", dCancelled, GetDeadline(lTermKey)) >= 0 Then
 		If TermIndicator = "Future" Then ' 17A
-			Decision = "Cancelled on or before deadline. ง17A"
+			Decision = "Cancelled on or before deadline. ยง17A"
 			DepositDecision = "Refund."
 			If getOCPermitStatus(lPatronKey, atDate, , "") = "Pending" Then
 				DepositDecision = "Do not process." ' Not specified in contract
@@ -135,7 +129,7 @@ Sub DetermineDeposit(ByVal lPatronKey, ByVal lTermKey, _
 				End If
 			Elseif isGraduating(lTermKey, lPatronKey) = True Then
 				DepositDecision = "Refund." ' Contract Sec 17B6
-				Decision = "Student is graduating. ง17B6"
+				Decision = "Student is graduating. ยง17B6"
 			Else
 				DepositDecision = "Refund."
 				Decision = "Student cancelled before deadline..."
@@ -182,20 +176,20 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 '	If IsSuspended(PatronKey, atDate) = True Then
 '		DetermineBreakContractFee = "No, academic suspension." ' Contract Sec. 17C3
 	If IsDisciplineSuspension(PatronKey, endDate) = True Then
-		DetermineBreakContractFee = "No, discipline suspension. ง17C1" ' Contract Sec. 17C1
+		DetermineBreakContractFee = "No, discipline suspension. ยง17C1" ' Contract Sec. 17C1
 	Elseif IsRejected(PatronKey, atDate) = True Then
-		DetermineBreakContractFee = "No, not eligible for admission. ง18" ' Contract Sec. 18, doesn't mention CBF
+		DetermineBreakContractFee = "No, not eligible for admission. ยง18" ' Contract Sec. 18, doesn't mention CBF
 	Else
 		If TermIndicator = "Future" Then
-			DetermineBreakContractFee = "No ง17A" ' Contract Section 17A
+			DetermineBreakContractFee = "No ยง17A" ' Contract Section 17A
 		Else 'term must be current
-			If DateDiff("d", GetCancelledDate(Patronkey, TermKey), GetTermEnd(TermKey)) <= 14 Then
-				DetermineBreakContractFee = "No, cancelled within last two weeks of semester."
+			If DateDiff("d", Now(), oTerm.EndDate) <= 14 Then
+				DetermineBreakContractFee = "No, cancelling within last two weeks of semester"
 			Elseif GetTermName(lTermKey) = "Spring" AND getOCPermitStatus(PatronKey, atDate, , pDate) = "Completed" Then
 				If DateDiff("d", GetDeadline(TermKey), pDate) >= 0 AND _
 					DateDiff("d", pDate, GetClassesStart(TermKey)) >= 0 Then
 					'^^ student received permit before classes start and cancelled before deadline
-					DetermineBreakContractFee = "No, has OC permit.  ง17B2"
+					DetermineBreakContractFee = "No, has OC permit.  ยง17B2"
 				Else
 					'student either cancelled after deadline or received permit after deadline
 					DetermineBreakContractFee = "Yes." ' Contract Section 17B2
@@ -212,7 +206,7 @@ Public Function DetermineBreakContractFee(ByVal PatronKey, ByVal TermKey, ByVal 
 					If Not IsEmpty(dActualStart) AND Not IsEmpty(dActualEnd) Then ' 
 						If DateDiff("d", dActualStart, dActualEnd) < MaxAssignLengthBeforeCBF AND _ 
 							DateDiff("d", dActualStart, atDate) <= MaxAssignLengthBeforeCBF Then
-							DetermineBreakContractFee = "No, checked out on opening day. ง17B4"
+							DetermineBreakContractFee = "No, checked out on opening day. ยง17B4"
 						Else
 							DetermineBreakContractFee = "Yes, checked out during semester."
 						End If
@@ -273,12 +267,12 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 				AssignmentMessage = AssignmentMessage & "is not enrolled."
 				ChargeMessage = "Prorate charges."
 			Else
-				AssignmentMessage = "Don't change contract, student still enrolled. ง17B5"
+				AssignmentMessage = "Don't change contract, student still enrolled. ยง17B5"
 				ChargeMessage = "Don't change charges, still enrolled."
 			End If
 
 		Elseif IsAssigned(Patronkey, startDate, atDate, contractState) = 1 Then
-			AssignmentMessage = "กMultiple active assignments for term!"
+			AssignmentMessage = "ยกMultiple active assignments for term!"
 		Else
 			AssignmentMessage = "Student not assigned for term."
 			ChargeMessage = "Verify no charges on account."
@@ -287,9 +281,6 @@ Sub ProcessAssignment(ByVal PatronKey, ByVal TermKey, ByVal TermIndicator, ByVal
 		AssignmentMessage = "Is this cancellation for a past semester?"
 	End If
 
-	If DateDiff("d", Now(), GetTermEnd(TermKey)) <= 14 Then
-		ChargeMessage = "No proration during last two weeks of semester."
-	End If
 End Sub
 
  
@@ -476,20 +467,6 @@ Public Function GetTermName(ByVal TermKey)
 	
 End Function
 
-Public Function GetTermEnd(ByVal TermKey)
-
-	Dim oHMS, rsTerms, termEnd
-	Set oHMS = GetClass("HMSDBSrv.TermRead")
-	Set rsTerms = oHMS.GetTerms(GetUserSession("StaffToken"), TermKey)
-	
-	rsTerms.Filter = "Term_Key=" & TermKey
-	If rsTerms.EOF = True Then
-		Response.Redirect "Error.asp?Error=Unable to look up term"
-	End If
-	
-	GetTermEnd = rsTerms("EndDate")
-	
-End Function
 Public Function IsAssigned(ByVal PatronKey, ByVal atDate, ByVal endDate, ByRef contractState) 'missing a parameter here that is global
 
 	Dim oElements, rsElements, contractCount
